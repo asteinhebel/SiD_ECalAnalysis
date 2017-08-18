@@ -47,7 +47,7 @@ def linearFit2(ecalMid,ecalEnd,graph,totEnArray):
 
 ##################################################################################
 # for x in [X_0] and y in MIP *only* - gamma distribution fit of entire ECal shower
-def gammaFit(ecalEnd,graph):
+def gammaFit(ecalEnd,graphn,totEnArray):
     fitFn=[0]*7
     integral=[0.]*7
     params=[0]*7
@@ -65,7 +65,7 @@ def gammaFit(ecalEnd,graph):
             fitFn[i].SetParameter(1,4.)
         graph[i].Fit(fitFn[i])
         params[i]=fitFn[i].GetParameters()
-        integral[i]=fitFn[i].Integral(ecalEnd,xInt,1.e-12)*50./57. #integrate up to y=10e-11 and multiply by HCal X_0/layer to get idea of HCal energy that's unaccounted for
+        integral[i]=fitFn[i].Integral(ecalEnd,xInt,1.e-12)/totEnArray[i]/(5.*0.26) #integrate up to y=10e-10 and divide by 5 mm*0.26 from extrapolating from radiation lengths of thick layers
         roundParams[i]=[0.]*3
         for j in range(3):
             roundParams[i][j]="{0:.4f}".format(round(params[i][j],4))

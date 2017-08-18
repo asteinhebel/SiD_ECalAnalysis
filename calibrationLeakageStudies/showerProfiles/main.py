@@ -205,7 +205,7 @@ if not xPos:
         fitFn,integral,params=fitting.linearFit2(radLen[26],radLen[30],showerProfileGraph,totEnArray) 
     else: 
         #gamma fit - plotting MIPs vs radiation lengths
-        fitFn,integral,params=fitting.gammaFit(radLen[30],showerProfileGraph)
+        fitFn,integral,params=fitting.gammaFit(radLen[30],showerProfileGraph,totEnArray)
 
     showerCanvas=[0]*7
     calLine=TLine(26.5,0,26.5,1000)

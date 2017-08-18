@@ -15,12 +15,12 @@ import fitting
 ##~~~~~~~~~~~~~~~~~~~~~~~~~
 #This code is robust for any phi that results in a shower encountering all 30 ECal layers fully (not in the overlap region) -> -15[deg]<phi<4 [deg] and all multiples
 phi=0
-evtsPerEn=500
+evtsPerEn=5000
 ecalLayers=31
 hcalLayers=40
 
 #This code can be run on data files with or without the 5T solenoid magnetic field, however the seeded fit parameters may need to be altered for fit convergence
-inFile='/media/USB_henryphysicsBackup/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_'+str(evtsPerEn)+'a.GeVScan.'+str(phi)+'phi.slcio'
+inFile='/media/USB_henryphysicsBackup/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_'+str(evtsPerEn)+'a.GeVscan.'+str(phi)+'phi.slcio'
 nmbEvents=7*evtsPerEn
 energyArray=[1,2,5,10,20,50,100]
 
@@ -35,12 +35,12 @@ if not xPos:
                           #if not radiationLength, then length plotted as "scaled radiation length" with ECal radiation lengths plotted as usual and HCal radiation lengths scaled by (dE/dx)_W/(dE/dx)_Fe
 
 ###choose cuts###
-backscatterCut=True #if backscatterCut, then all hits outside a code of radius 0.2 radians from the original particle gun are removed in final plots
+backscatterCut=False #if backscatterCut, then all hits outside a code of radius 0.2 radians from the original particle gun are removed in final plots
                      #if not backscatterCut, then all hits considered
 
 ###choose fitting method###
 #linFit is the default. Gamma distributions can ONLY FIT MIP VS X0 PLOTS
-linFit=True #if linFit, then deposits in the last 5 ECal layers are fit to an exponential and extrapolated into the HCal to estimate leakage
+linFit=False #if linFit, then deposits in the last 5 ECal layers are fit to an exponential and extrapolated into the HCal to estimate leakage
             #if not linFit, then the entire ECal shower is fit to a gamma distribution and extrapolated into the HCal to estimate leakage
 
 if not linFit and not critEn and not radiationLength:
@@ -54,8 +54,10 @@ showerProfileGraph=[0]*7
 showerProfileGraphLong=[0]*7
 
 fullEnergyDistHist=[0]*7
+fitLegend=[0]*7
 for i in range(7):
     fullEnergyDistHist[i] = TH1D( 'TotalDepositedEnergy'+str(i), 'Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90);Measured Deposited Energy [GeV];Entries', 5*(i+1)*(i+1), 0.,0.075*(i+1)*(i+1))
+    fitLegend[i]=TLegend(0.15,0.2,0.35,0.4)
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Record layer/module arrays
@@ -150,14 +152,14 @@ for z in range(ecalLayers+hcalLayers):
                 radLenLong[z]=radLenLong[z-1]+(20./math.cos(math.pi/180.*phi)*0.057)*20.2665/12.1338 #typical radiation length scaled by (dE/dx)_W/(dE/dx)_Fe
     else:
         if z==0:
-            layerPosLong[z]=1264./math.cos(math.pi/180.*phi) #
             layerPos[z]=1264./math.cos(math.pi/180.*phi)
+            layerPosLong[z]=layerPos[z]
         elif z<21:
-            layerPosLong[z]=layerPosLong[z-1]+3.75/math.cos(math.pi/180.*phi)
             layerPos[z]=layerPos[z-1]+3.75/math.cos(math.pi/180.*phi)
+            layerPosLong[z]=layerPos[z]
         elif z<ecalLayers:
-            layerPosLong[z]=layerPosLong[z-1]+6.25/math.cos(math.pi/180.*phi)
             layerPos[z]=layerPos[z-1]+6.25/math.cos(math.pi/180.*phi)
+            layerPosLong[z]=layerPos[z]
         else:
             layerPosLong[z]=layerPosLong[z-1]+27./math.cos(math.pi/180.*phi)/6. #approximate for radiation length difference
 
@@ -167,20 +169,24 @@ for z in range(ecalLayers+hcalLayers):
 if xPos:
     for i in range(7):
         showerProfileGraph[i]=TGraph(31,array('d',layerPos),array('d',layerMeanArray[i]))
-        
-    #fit the last 5 layers to an exponential
-    linFitFn,integral=fitting.linearFit1(layerPos[26],layerPos[30],showerProfileGraph,totEnArray)
 
-    canvas27=[0]*7
-    for i in range(7):    
-        canvas27[i]=TCanvas('aaCanvas'+str(i),'plusHcal'+str(i),800,700)
-        showerProfileGraphLong[i]=TGraph(71,array('d',layerPosLong),array('d',[i]))
+    #fit the last 5 layers to an exponential
+    linFitFn,integral,params=fitting.linearFit1(layerPos[26],layerPos[30],showerProfileGraph,totEnArray)
+
+    linFitCanvas=[0]*7
+    for i in range(7):
+        linFitCanvas[i]=TCanvas('linFitCanvas'+str(i),str(energyArray[i])+' GeV Shower Profile in [mm] vs [GeV] with Linear Fit',800,700)
+        showerProfileGraphLong[i]=TGraph(71,array('d',layerPosLong),array('d',layerMeanArrayLong[i]))
         showerProfileGraphLong[i].Draw("AC*")
-        showerProfileGraphLong[i].SetTitle("Mean Energy per Layer vs x position in ECal and HCal ("+str(evtsPerEn)+" "+str(energyArray[i])+" GeV photons, theta=90, phi="+str(phi)+");x position [mm];mean layer energy [GeV]")
+        showerProfileGraphLong[i].SetTitle("Mean Energy per Layer vs x position in ECal and HCal ("+str(evtsPerEn)+" "+str(energyArray[i])+" GeV photons, theta=90, phi="+str(phi)+");x position [mm];Mean Measured Deposits per Layer [GeV]")
         linFitFn[i].Draw("same")
+        fitLegend[i].AddEntry(showerProfileGraphLong[i],"Fit function = b+mx","")
+        fitLegend[i].AddEntry(showerProfileGraphLong[i],"b = "+str(params[i][0]),"")
+        fitLegend[i].AddEntry(showerProfileGraphLong[i],"m = "+str(params[i][1]),"")
+        fitLegend[i].Draw()
         showerProfileGraphLong[i].GetYaxis().SetTitleOffset(1.5)
-        canvas27[i].SetLogy()
-        showerProfileGraphLong[i].GetYaxis().SetRangeUser(0.0000000001,0.1)
+        linFitCanvas[i].SetLogy()
+        showerProfileGraphLong[i].GetYaxis().SetRangeUser(0.00000001,1.)
  
     print "Integral values: "+str(integral)
 
@@ -196,16 +202,16 @@ if not xPos:
 
     if linFit:
         #fit the last 5 layers to an exponential
-        fitFn,integral=fitting.linearFit2(radLen[26],radLen[30],showerProfileGraph,totEnArray)
+        fitFn,integral,params=fitting.linearFit2(radLen[26],radLen[30],showerProfileGraph,totEnArray) 
     else: 
         #gamma fit - plotting MIPs vs radiation lengths
-        fitFn,integral=fitting.gammaFit(radLen[30],showerProfileGraph)
+        fitFn,integral,params=fitting.gammaFit(radLen[30],showerProfileGraph)
 
-    canvas26=[0]*7
+    showerCanvas=[0]*7
     calLine=TLine(26.5,0,26.5,1000)
     for i in range(7):           
         showerProfileGraphLong[i]=TGraph(71,array('d',radLenLong),array('d',layerMeanArrayLong[i]))
-        canvas26[i]=TCanvas('zCanvas'+str(i),'tot layer en vs rad len'+str(i),800,700)
+        showerCanvas[i]=TCanvas('showerCanvas'+str(i),str(energyArray[i])+' GeV Shower Profile with Leakage Extrapolation Fit',800,700)
         showerProfileGraphLong[i].Draw("AC*")
         if not radiationLength and not critEn:
             showerProfileGraphLong[i].SetTitle("Mean Energy per Layer vs Scaled Radiation Length X_{0} in ECal and HCal ("+str(evtsPerEn)+" "+str(energyArray[i])+" GeV photons, theta=90, phi="+str(phi)+");(Scaled HCal) Radiation Lengths; Average Number of MIPs")
@@ -219,8 +225,19 @@ if not xPos:
         elif radiationLength and critEn:
             showerProfileGraphLong[i].SetTitle("Mean Energy per Layer vs Radiation Length X_{0} in ECal and HCal ("+str(evtsPerEn)+" "+str(energyArray[i])+" GeV photons, theta=90, phi="+str(phi)+");Radiation Lengths [X_{0}]; Critical Energies [E_{C}]")
             showerProfileGraphLong[i].GetYaxis().SetRangeUser(0.0001,20.)
+        if linFit:
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"Fit function = b+mx","")
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"b = "+str(params[i][0]),"")
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"m = "+str(params[i][1]),"")
+            fitLegend[i].Draw()
+        else:
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"Fit function = A x^{#alpha} e^{-bx}","")
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"A = "+str(params[i][0]),"")
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"#alpha = "+str(params[i][1]),"")
+            fitLegend[i].AddEntry(showerProfileGraphLong[i],"b = "+str(params[i][2]),"")
+            fitLegend[i].Draw()
         showerProfileGraphLong[i].GetYaxis().SetTitleOffset(1.3)
-        canvas26[i].SetLogy()
+        showerCanvas[i].SetLogy()
         fitFn[i].Draw("same")
         calLine.Draw("same")
 

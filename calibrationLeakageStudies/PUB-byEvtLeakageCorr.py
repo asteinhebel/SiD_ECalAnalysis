@@ -30,19 +30,25 @@ energyArray=[1,2,5,10,20,50,100]
 energyArray_offset=[x*1.05 for x in energyArray] #for nicer looking plot
 ecalLayers=31
 hcalLayers=40
+#input values from Julia toy calibration code
+calibrationLinear=58.464354462350954
+calibrationNonlinear=0.5941123907726221
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Create histograms, legends, and graphs
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 hitEnergyHist=[0]*7 #full distribution of all 5000 events before correction
+hitEnergyHist1=[0]*7 #full distribution of all 5000 events after shower shape correction
 hitEnergyHistCorr=[0]*7 #full distribution of all 5000 events after correction
 evtGraph=[0]*7 #graph the shower profile in ECal and HCal for each event
 enRadLenGraph=[0]*7
-enResLegend=TLegend(0.6,0.75,0.8,0.9)
+enResLegend1=TLegend(0.6,0.75,0.8,0.9)
+enResLegend2=TLegend(0.6,0.75,0.8,0.9)
 
 for i in range(7):
-    hitEnergyHist[i] = TH1D( 'TotalDepositedEnergy'+str(i), 'Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90) - 1,2 Weighted;ECAL Barrel Hit Energy [# MIPs];Entries',500,0.,20000.)
-    hitEnergyHistCorr[i] = TH1D( 'TotalDepositedEnergyCorr'+str(i), 'Corrected Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90) - 1,2 Weighted; Energy [# MIPs];Entries', 500,0.,20000.)
+    hitEnergyHist[i] = TH1D( 'TotalDepositedEnergy'+str(i), 'Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90);Total Measured Deposited Energy [# MIPs];Entries',500,0.,20000.)
+    hitEnergyHist1[i] = TH1D( 'TotalDepositedEnergyCalib'+str(i), 'Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90);Total Measured Deposited Energy [# MIPs];Entries',100000,0.,400000000.)
+    hitEnergyHistCorr[i] = TH1D( 'TotalDepositedEnergyCorr'+str(i), 'Corrected Event Energy Deposit ('+str(energyArray[i])+' GeV photons, phi='+str(phi)+', theta=90) ;Total Measured Deposited Energy [# MIPs];Entries', 500,0.,20000.)
     evtGraph[i]=[0]*evtsPerEn
 
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -81,13 +87,14 @@ reader = IOIMPL.LCFactory.getInstance().createLCReader()
 reader.open( inFile )
 count=-1
 evNo=0 #tracks what energy the event has for histogram filling loop
-eventLayerArray=[0]*7 #record total deposits in each layer of each event of ECal(weighted for sampling fraction correction)
+eventLayerArray=[0]*7 #record total deposits in each layer of each event of ECal (weighted for sampling fraction correction)
+#eventLayerArray2=[0]*7 #record total deposits in each layer of each event of ECal (weighted for sampling fraction correction) after shower shape calibration
 corrTotalArray=[0]*7 #record mean of each event after leakage correction
 evtFitFnArray=[0]*7 #create Gaussian function to fit to each event's profile
 for i in range(7):
-    eventLayerArray[i]=[0.]*evtsPerEn
     corrTotalArray[i]=[0.]*evtsPerEn
     evtFitFnArray[i]=[0.]*evtsPerEn
+    eventLayerArray[i]=[0.]*evtsPerEn
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Loop over all events in file
@@ -96,7 +103,8 @@ for dep in reader:
     count+=1
     if count%100==0:
 	print "Summing energy of event "+str(count)
-    hitTotal=0.	
+    hitTotal=0.
+    hitTotal2=0.	
     layerTotal=[0.]*31
     # get the collection from the event
     hitCollection = dep.getCollection( 'ECalBarrelHits' )     
@@ -105,22 +113,24 @@ for dep in reader:
     for hit in hitCollection:
         if solidAngle(hit)<phiRad+0.2 and solidAngle(hit)>phiRad-0.2: #hits within cone of 0.2 radians of original particle gun trajectory (rejects backscatter)
             if layerNos[count][hitNo]>0 and layerNos[count][hitNo]<21: #exclude tracking layer0
-                hitTotal+=hit.getEnergy()/0.000124 #fill with MIP value; in silicon 1 MIP = 0.124 MeV
-                layerTotal[layerNos[count][hitNo]]+=hit.getEnergy()/0.000124 #fill with MIP value
+                hitTotal+=hit.getEnergy()
+                layerTotal[layerNos[count][hitNo]]+=hit.getEnergy()
             elif layerNos[count][hitNo]>0:#exclude tracking layer0
-                hitTotal+=hit.getEnergy()*2/0.000124 #fill with MIP value
-                layerTotal[layerNos[count][hitNo]]+=hit.getEnergy()/0.000124 #fill with MIP value
+                hitTotal+=hit.getEnergy()*2
+                layerTotal[layerNos[count][hitNo]]+=hit.getEnergy()
             hitNo+=1
  
-    # fill arrays with deposit information
+    # fill arrays with deposit information in units of MIPs (in silicon 1 MIP=0.124 MeV)
     if count<evtsPerEn*(evNo+1):
-        hitEnergyHist[evNo].Fill(hitTotal)
-        eventLayerArray[evNo][count-evNo*evtsPerEn]=[x for x in layerTotal] 
-	corrTotalArray[evNo][count-evNo*evtsPerEn]=hitTotal
+        hitEnergyHist[evNo].Fill(hitTotal/0.000124)
+        hitEnergyHist1[evNo].Fill(hitTotal/0.000124*(calibrationLinear+calibrationNonlinear*math.sqrt(hitTotal)))
+        eventLayerArray[evNo][count-evNo*evtsPerEn]=[x/0.000124 for x in layerTotal] 
+	corrTotalArray[evNo][count-evNo*evtsPerEn]=hitTotal/0.000124
     if count==(evtsPerEn-1)*(evNo+1)+evNo:
         evNo+=1
 
 reader.close()
+
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Fill Arrays for Graphs
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,7 +154,7 @@ for z in range(ecalLayers+hcalLayers):
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Fit Distributions and Estimate Leakage for each Event
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#Fit full distributions (depth vs measured energy) with Gamma Distribution to get starting point for parameteters
+#Fit full distributions (depth vs measured energy) with Gamma Distribution to get starting point for parameters
 fullDistFitFnArray=[0]*7
 params=[0.]*7
 
@@ -191,19 +201,22 @@ error=[0.]*7
 zeros=[0.]*7
 
 for i in range(7):
-    fitFunctionGauss[i]=[0.]*2
-    scaledEnRes[i]=[0.]*2
-    error[i]=[0.]*2
-    for j in range(2):
+    fitFunctionGauss[i]=[0.]*3
+    scaledEnRes[i]=[0.]*3
+    error[i]=[0.]*3
+    for j in range(3):
         #fit a Gaussian to the total distribution (measured energy vs entries) to find mean and RMS
-        fitFunctionGauss[i][j]=TF1('fitFnGauss'+str(i),'gaus',0.,20000.)
+        fitFunctionGauss[i][j]=TF1('fitFnGauss'+str(i),'gaus',0.,400000000.)
         fitFunctionGauss[i][j].SetLineStyle( kDashed )
         if j==0:
             fitFunctionGauss[i][0].SetLineColor( kBlue )
             hitEnergyHist[i].Fit( fitFunctionGauss[i][0],'R')
-        else:
+        elif j==1:
             fitFunctionGauss[i][1].SetLineColor( kRed )
-            hitEnergyHistCorr[i].Fit( fitFunctionGauss[i][1],'R')
+            hitEnergyHist1[i].Fit( fitFunctionGauss[i][1],'R')
+        else:
+            fitFunctionGauss[i][2].SetLineColor( kRed )
+            hitEnergyHistCorr[i].Fit( fitFunctionGauss[i][2],'R')
         #calculate scaled energy resolution and errors
         scaledEnRes[i][j]=math.sqrt(float(energyArray[i]))*fitFunctionGauss[i][j].GetParameter(2)/fitFunctionGauss[i][j].GetParameter(1)
         error[i][j]=scaledEnRes[i][j]/math.sqrt(evtsPerEn)
@@ -224,21 +237,33 @@ for i in range(4):
 scaledEnRes=zip(*scaledEnRes) #transpose
 error=zip(*error) #transpose
 scaledEnResGraph=TGraphErrors(7,array('d',energyArray),array('d',scaledEnRes[0]),array('d',zeros),array('d',error[0]))
-scaledEnResGraphCorr=TGraphErrors(7,array('d',energyArray_offset),array('d',scaledEnRes[1]),array('d',zeros),array('d',error[1]))
-enResGraph=TMultiGraph()
-enResGraph.SetTitle("Scaled Energy Resolution; Initial Energy [GeV]; Energy~Resolution * #\sqrt{E}")
+scaledEnResGraphCalib=TGraphErrors(7,array('d',energyArray_offset),array('d',scaledEnRes[1]),array('d',zeros),array('d',error[1]))
+scaledEnResGraphCorr=TGraphErrors(7,array('d',energyArray_offset),array('d',scaledEnRes[2]),array('d',zeros),array('d',error[2]))
+
+enResGraph1=TMultiGraph() #uncorrected and calibrated
+enResGraph1.SetTitle("Scaled Energy Resolution; Initial Energy [GeV]; Energy~Resolution * #\sqrt{E}")
 scaledEnResGraph.SetLineColor(kBlue)
 scaledEnResGraph.SetMarkerColor(kBlue)
 scaledEnResGraph.SetMarkerStyle(20)
 scaledEnResGraph.SetMarkerSize(1.)
 scaledEnResGraph.SetLineWidth(3)
+scaledEnResGraphCalib.SetLineColor(kGreen+2)
+scaledEnResGraphCalib.SetMarkerColor(kGreen+2)
+scaledEnResGraphCalib.SetMarkerStyle(22)
+scaledEnResGraphCalib.SetMarkerSize(1.)
+scaledEnResGraphCalib.SetLineWidth(3)
+enResGraph1.Add(scaledEnResGraph)
+enResGraph1.Add(scaledEnResGraphCalib)
+
+enResGraph2=TMultiGraph() #uncorrected and event-by-event corrected
+enResGraph2.SetTitle("Scaled Energy Resolution; Initial Energy [GeV]; Energy~Resolution * #\sqrt{E}")
 scaledEnResGraphCorr.SetLineColor(kRed)
 scaledEnResGraphCorr.SetMarkerColor(kRed)
 scaledEnResGraphCorr.SetMarkerStyle(21)
 scaledEnResGraphCorr.SetMarkerSize(0.75)
 scaledEnResGraphCorr.SetLineWidth(2)
-enResGraph.Add(scaledEnResGraph)
-enResGraph.Add(scaledEnResGraphCorr)
+enResGraph2.Add(scaledEnResGraph)
+enResGraph2.Add(scaledEnResGraphCorr)
 
 canvasUncorr=TCanvas('canvasUncorr','Uncorreced Scaled Energy Resolution',800,700)
 scaledEnResGraph.Draw("AP")
@@ -247,11 +272,19 @@ canvasUncorr.SetLogx()
 scaledEnResGraph.SetTitle("Scaled Energy Resolution; Initial Energy [GeV]; Energy~Resolution * #\sqrt{E}")
 scaledEnResGraph.GetYaxis().SetTitleOffset(1.5)
 
+canvasCalib=TCanvas('canvasCalib','Calibrated Scaled Energy Resolution',800,700)
+canvasCalib.SetLogx()
+enResGraph1.Draw("AP")
+enResLegend1.AddEntry(scaledEnResGraph,"Uncalibrated","p")
+enResLegend1.AddEntry(scaledEnResGraphCalib,"Calibrated by Shower Shape","p")
+enResLegend1.Draw()
+enResGraph1.GetYaxis().SetTitleOffset(1.5)
+
 canvasCorr=TCanvas('canvasCorr','Corrected Scaled Energy Resolution',800,700)
 canvasCorr.SetLogx()
-enResGraph.Draw("AP")
-enResLegend.AddEntry(scaledEnResGraph,"Uncalibrated ","p")
-enResLegend.AddEntry(scaledEnResGraphCorr,"Corrected","p")
-enResLegend.Draw()
-enResGraph.GetYaxis().SetTitleOffset(1.5)
+enResGraph2.Draw("AP")
+enResLegend2.AddEntry(scaledEnResGraph,"Uncalibrated","p")
+enResLegend2.AddEntry(scaledEnResGraphCorr,"Corrected Event-by-event","p")
+enResLegend2.Draw()
+enResGraph2.GetYaxis().SetTitleOffset(1.5)
 

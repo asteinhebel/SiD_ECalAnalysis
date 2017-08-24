@@ -24,7 +24,7 @@ def linearFit1(ecalMid,ecalEnd,graph,totEnArray):
     return fitFn,integral,roundParams
 
 ##################################################################################
-# for x in [X_0]
+# for x not in [mm]
 def linearFit2(ecalMid,ecalEnd,graph,totEnArray):
     fitFn=[0]*7
     integral=[0.]*7
@@ -35,9 +35,6 @@ def linearFit2(ecalMid,ecalEnd,graph,totEnArray):
         graph[i].Fit(fitFn[i], "R" )
         params[i]=fitFn[i].GetParameters()
         xInt=(1/params[i][1])*(math.log(0.000000001)-params[i][0]) #until y=10e-10
-#        linB=fitFn[i].GetParameter(0)
-#        slope=fitFn[i].GetParameter(1)
-#        xInt=(1/slope)*(math.log(0.000000001)-linB) #until y=10e-10
         integral[i]=fitFn[i].Integral(ecalEnd,xInt,1.e-12)/totEnArray[i]/(5.*0.26) #integrate up to y=10e-10 and divide by 5 mm*0.26 from extrapolating from radiation lengths of thick layers
         roundParams[i]=[0.]*2
         for j in range(2):

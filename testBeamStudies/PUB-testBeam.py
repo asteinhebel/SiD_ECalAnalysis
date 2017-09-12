@@ -150,11 +150,16 @@ null8Canvas=TCanvas('null8Canvas','Events with 8 Empty Layers',1500,1100)
 null8Canvas.Divide(3,3)
 for i in range(9):
     null8Canvas.cd(i+1)
-    null8Hist[8-i].Draw()
-    null8Hist[8-i].SetStats(0)
-    null8Hist[8-i].SetFillColor(ROOT.kMagenta)
-    null8Hist[8-i].GetYaxis().SetTitleOffset(0.9)
-    null8Hist[8-i].GetXaxis().SetTitleOffset(0.8)
+    if siFirst:
+        index=8-i
+    else:
+        index=i
+    null8Hist[index].Draw()
+    null8Hist[index].SetStats(0)
+    null8Hist[index].SetFillColor(ROOT.kMagenta)
+    null8Hist[index].GetYaxis().SetTitleOffset(0.9)
+    null8Hist[index].GetXaxis().SetTitleOffset(0.8)
+
 
 statCanvas=TCanvas('stat1Canvas','Statistics Ratio R',1500,1100)
 statCanvas.Divide(3,3)

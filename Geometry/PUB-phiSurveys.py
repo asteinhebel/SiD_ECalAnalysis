@@ -8,6 +8,8 @@ import math
 # Set global variables and import data files
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 phi=[0,3.75,7.5,9.3,11.25,15,18.75,22.5,30] #Each input data file contains showers at one phi location. This array defines which of those files are pulled into the code for analysis. Here, 14 files are pulled in - 7 phi locations for both 100 GeV and 10 GeV EM showers
+phi1=[x+0.5 for x in phi] #to offset the data points for easy visual comparison
+
 nmbEvents=500 #number of showers in each file
 nmbLayers=32 #number of ECal layers
 inFile=[0]*len(phi)
@@ -169,8 +171,6 @@ meanH=[0]*len(phi)
 meanH1=[0]*len(phi)
 sigmaH=[1/math.sqrt(nmbEvents)]*len(phi)
 zeros=[0]*len(phi)
-bend1=[0.8]*len(phi) #to offset error bars
-bend2=[-0.8]*len(phi) #to offset error bars
 for i in range(len(phi)):
     fitE[i]=TF1('fitFnGauss'+str(i),'gaus',0.,2.)
     fitE1[i]=TF1('fitFnGauss1'+str(i),'gaus',0.,2.)
@@ -186,13 +186,13 @@ for i in range(len(phi)):
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Define graphs for ECal and HCal comparisons, and draw graphs
 ##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-graphE=TGraphBentErrors(len(phi),array('d',phi),array('d',meanE),array('d',zeros),array('d',zeros),array('d',sigmaE),array('d',sigmaE),array('d',zeros),array('d',zeros),array('d',zeros),array('d',zeros))
+graphE=TGraphErrors(len(phi),array('d',phi),array('d',meanE),array('d',zeros),array('d',sigmaE))
 graphE.SetMarkerStyle(21)
 graphE.SetMarkerColor(kRed)
 graphE.SetMarkerSize(2)
 graphE.SetLineColor(kRed)
 graphE.SetLineWidth(3)
-graphE1=TGraphBentErrors(len(phi),array('d',phi),array('d',meanE1),array('d',zeros),array('d',zeros),array('d',sigmaE1),array('d',sigmaE1),array('d',zeros),array('d',zeros),array('d',bend1),array('d',bend2))
+graphE1=TGraphErrors(len(phi),array('d',phi1),array('d',meanE1),array('d',zeros),array('d',sigmaE1))
 graphE1.SetMarkerStyle(8)
 graphE1.SetMarkerColor(kBlue)
 graphE1.SetMarkerSize(2)

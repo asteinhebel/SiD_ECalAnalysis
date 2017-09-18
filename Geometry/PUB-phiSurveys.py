@@ -17,9 +17,9 @@ readerL=[0]*len(phi)
 inFile1=[0]*len(phi)
 readerL1=[0]*len(phi)
 for i in range(len(phi)):
-    inFile[i]='/media/Seagate Expansion Drive_/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_500a.10GeV.'+str(phi[i])+'phi.slcio'
+    inFile[i]='reco_500a.10GeV.'+str(phi[i])+'phi.slcio'
     readerL[i] = LcioReader(inFile[i])
-    inFile1[i]='/media/Seagate Expansion Drive_/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_500a.100GeV.'+str(phi[i])+'phi.slcio'
+    inFile1[i]='reco_500a.100GeV.'+str(phi[i])+'phi.slcio'
     readerL1[i] = LcioReader(inFile1[i])
 #All objects associated with 100 GeV runs has an additional "1" on their name, to differentiate from the 10 GeV-associated objects
 

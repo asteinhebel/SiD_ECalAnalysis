@@ -22,7 +22,7 @@ phi=0 #angle of incidence - from particle gun
 phir=phi*math.pi/180. #phi in radians
 pRange=0.1 #Specify backscatter cut. Hits with solid angle outside phir +/- pRange are considered backscatter
 evtsPerEn=500
-inFile='/media/Seagate Expansion Drive_/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_'+str(evtsPerEn)+'a.GeVScan.'+str(phi)+'phi.slcio'
+inFile='reco_'+str(evtsPerEn)+'a.GeVScan.'+str(phi)+'phi.slcio'
 nmbEvents=7*evtsPerEn
 readerL = LcioReader(inFile ) #create a reader
 

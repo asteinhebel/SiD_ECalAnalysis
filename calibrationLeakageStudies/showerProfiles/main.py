@@ -20,7 +20,7 @@ ecalLayers=31
 hcalLayers=40
 
 #This code can be run on data files with or without the 5T solenoid magnetic field, however the seeded fit parameters may need to be altered for fit convergence
-inFile='/media/USB_henryphysicsBackup/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_'+str(evtsPerEn)+'a.GeVscan.'+str(phi)+'phi.slcio'
+inFile='reco_'+str(evtsPerEn)+'a.GeVscan.'+str(phi)+'phi.slcio'
 nmbEvents=7*evtsPerEn
 energyArray=[1,2,5,10,20,50,100]
 

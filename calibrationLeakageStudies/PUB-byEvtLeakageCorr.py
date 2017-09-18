@@ -19,7 +19,7 @@ def solidAngle(hit):
 phi=0
 phiRad=phi*math.pi/180.
 evtsPerEn=5000
-inFile='/media/USB_henryphysicsBackup/henryphysicsBackup_SL6/lcgeo/simulationFiles.SiD_o2_v02/photons/reco_'+str(evtsPerEn)+'a.GeVscan.'+str(phi)+'phi.slcio'
+inFile='reco_'+str(evtsPerEn)+'a.GeVscan.'+str(phi)+'phi.slcio'
 nmbEvents=7*evtsPerEn
 
 #create a reader
